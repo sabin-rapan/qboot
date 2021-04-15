@@ -142,7 +142,8 @@ static void boot_multiboot_from_fw_cfg(void)
 	struct mb_info *mb;
 	struct mb_mmap_entry *mbmem;
 	int i;
-	uint32_t sz;
+	uint32_t sz, prev_cmdline_size, new_cmdline_size;
+	char *prev_cmdline, *new_cmdline;
 
 	fw_cfg_select(FW_CFG_KERNEL_SIZE);
 	sz = fw_cfg_readl_le();
@@ -174,6 +175,17 @@ static void boot_multiboot_from_fw_cfg(void)
 		mbmem->type = e820->map[i].type;
 		mb->mmap_length += sizeof(*mbmem);
 	}
+
+	prev_cmdline = (char *) mb->cmdline;
+	prev_cmdline_size = strlen(prev_cmdline);
+	printf("prev_cmdline_size %d prev_cmdline_addr %p prev_cmdline_str %s\n", prev_cmdline_size, prev_cmdline, prev_cmdline);
+	fw_cfg_select(FW_CFG_CMDLINE_SIZE);
+	new_cmdline_size = fw_cfg_readl_le();
+	new_cmdline = (char *)malloc(new_cmdline_size);
+	fw_cfg_read_entry(FW_CFG_CMDLINE_DATA, new_cmdline, new_cmdline_size);
+	printf("new_cmdline_size %d new_cmdline_addr %p new_cmdline_str %s\n", new_cmdline_size, new_cmdline, new_cmdline);
+	strcat(prev_cmdline, new_cmdline);
+	printf("mb->cmdline %s\n", (char *)mb->cmdline);
 
 #ifdef BENCHMARK_HACK
 	/* Exit just before getting to vmlinuz, so that it is easy
